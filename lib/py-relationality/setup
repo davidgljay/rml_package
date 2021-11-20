@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+declare -g venv python tooling_reqs
+venv="./tooling-venv"
+python=${PYTHON:-"python3"}
+tooling_reqs="./tooling-requirements.txt"
+
+log() { echo "$1" >&2 ; }
+
+set -e
+
+if [[ -d "$venv" ]]; then
+  log "Found virtual environment."
+else
+  log "Creating virtual environment."
+  if ! command -v "$python"; then
+    log "Error: python interpreter not found at [$python]"
+    log "Set PYTHON to location of python"
+    exit 1
+  fi
+  "$python" -m venv "$venv"
+fi
+
+log "Installing poetry and other tooling."
+"$venv/bin/pip" install -r "$tooling_reqs"

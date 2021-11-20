@@ -1,0 +1,9 @@
+.mypy_cache/
+__pycache__/
+*.egg-info/
+/.venv/
+.tooling
+.dev
+/tooling-venv/
+/.tmuxp.yaml
+
