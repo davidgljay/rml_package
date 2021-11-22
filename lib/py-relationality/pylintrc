@@ -128,7 +128,7 @@ const-rgx=(_([a-z_][a-z0-9_]*)|([A-Z][a-z]*)+)$
 docstring-min-length=-1
 function-naming-style=snake_case
 
-good-names=i, j, k, ex, Run, _, m, a, b, n, N
+good-names=i, j, k, ex, Run, _, m, a, b, n, N, S, T, U, V, W
 
 include-naming-hint=no
 inlinevar-naming-style=any

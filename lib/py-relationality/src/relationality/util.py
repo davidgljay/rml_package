@@ -1,6 +1,6 @@
 """Utility functions."""
 from typing import Tuple, Union
-import numpy as np  # type: ignore
+import numpy as np
 
 ProperShape = Tuple[int, ...]
 Shape = Union[int, ProperShape]

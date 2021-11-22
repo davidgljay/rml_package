@@ -7,11 +7,13 @@
     In the case of the distribution, at each point in the base space the
     values add up to 1.
 """
-from typing import Iterable
-import numpy as np  # type: ignore
-import numpy.random as nprand  # type: ignore
+from typing import TypeVar, Type, Iterable, Tuple, Any
+import numpy as np
+import numpy.random as nprand
 
 from relationality.util import Shape, dims, shape_lift, Indexer
+
+T = TypeVar('T', bound='Histo')
 
 
 class Histo(np.ndarray):
@@ -23,7 +25,7 @@ class Histo(np.ndarray):
     base_rank: int = 0
 
     @classmethod
-    def from_array(cls, a: np.ndarray, base_rank: int = 0):
+    def from_array(cls: Type[T], a: np.ndarray, base_rank: int = 0) -> T:
         """Downcast from ndarray."""
         if dims(a) < base_rank:
             raise ValueError("base_rank larger than dimensions of array")
@@ -32,23 +34,19 @@ class Histo(np.ndarray):
         return histo
 
     @classmethod
-    def from_iterable(cls, a: Iterable, base_rank: int = 0):
+    def from_iterable(cls: Type[T], a: Iterable, base_rank: int = 0) -> T:
         """Downcast from ndarray."""
         return cls.from_array(np.array(a), base_rank)
 
     @classmethod
-    def uniform(
-        cls, shape: Shape, value: float = 1, base_rank: int = 0
-    ) -> 'Histo':
+    def uniform(cls: Type[T], shape: Shape, value: float = 1, base_rank: int = 0) -> T:
         """Uniform histogram of constant value."""
         if dims(shape) < base_rank:
             raise ValueError("base_rank larger than given shape")
         return cls.from_array(np.full(shape, value), base_rank)
 
     @classmethod
-    def dirac(
-        cls, shape: Shape, index: Shape = 0, value: float = 1
-    ) -> 'Histo':
+    def dirac(cls: Type[T], shape: Shape, index: Shape = 0, value: float = 1) -> T:
         """Histo with only one non-zero value."""
         rank, fiber_rank = dims(shape), dims(index)
         if rank < fiber_rank:
@@ -89,14 +87,14 @@ class Histo(np.ndarray):
 class Distro(Histo):
     """Distribution of arbitrary shape."""
     @classmethod
-    def from_array(Self, a: np.ndarray, base_rank: int = 0) -> 'Distro':
+    def from_array(cls: Type[T], a: np.ndarray, base_rank: int = 0) -> T:
         """Downcast from ndarray."""
         rank = dims(a)
         if rank < base_rank:
             raise ValueError("base_rank larger than dimensions of array")
         axis = tuple(range(base_rank, rank))
         norms = np.sum(a, axis=axis, keepdims=True)
-        distro = (a / norms).view(Self)
+        distro = (a / norms).view(cls)
         distro.base_rank = base_rank
         return distro
 
@@ -128,7 +126,7 @@ def information(distro: Distro) -> Histo:
 def entropy(distro: Distro) -> np.ndarray:
     """Shannon entropy of distro in average nats."""
     if len(distro) == 1:
-        return 0.0
+        return np.array(0.)
     neg_info = np.log2(distro, where=(distro > 0.))
     return -np.sum(neg_info*distro, axis=distro.fiber_axis())
 
@@ -141,7 +139,7 @@ def relative_entropy(distro: Distro) -> np.ndarray:
     """
     size = len(distro)
     if size <= 1:
-        return 0.
+        return np.array(0.)
     max_entropy = np.log2(float(size))
     return entropy(distro)/max_entropy
 
@@ -151,8 +149,10 @@ def accumulate(distro: Distro) -> Cumulate:
     return Cumulate.from_distro(distro)
 
 
-def draw(distro: Distro) -> Shape:
-    """Draw randomly from a distro."""
+def draw(distro: Distro) -> Tuple[Any, ...]:
+    """Draw randomly from a distro.
+        The typing on this is messy.
+    """
     if distro.base_rank > 0:
         raise NotImplementedError(
             "Only single distros are currently supported. "
