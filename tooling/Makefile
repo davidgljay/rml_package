@@ -1,6 +1,6 @@
 PYTHON = "python3"
 
-tooling_venv = "tooling/venv"
+tooling_venv = "venv"
 
 .PHONY: all clean
 

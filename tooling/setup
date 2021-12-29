@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 
-declare -g here venv python tooling_reqs
-
-python=${PYTHON:-"python3"}
-
-here="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-venv="$here/venv"
-tooling_reqs="$here/tooling-requirements.txt"
+declare -r python=${PYTHON:-"python3"}
+declare -r here="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+declare -r venv="$here/venv"
+declare -r tooling_reqs="$here/tooling-requirements.txt"
 
 log() { echo "$1" >&2 ; }
 
