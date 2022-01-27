@@ -10,7 +10,7 @@ packages = [ { include = "relationality", from = "src" } ]
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 mypy = "*"
-numpy = "^1.21.4"
+numpy = "1.21.4"
 matplotlib = "^3.5.0"
 
 [tool.poetry.dev-dependencies]

@@ -10,6 +10,8 @@
 from typing import TypeVar, Type, Iterable, Tuple, Any
 import numpy as np
 import numpy.random as nprand
+from functools import reduce
+from operator import mul
 
 from relationality.util import Shape, dims, shape_lift, Indexer
 
@@ -60,6 +62,10 @@ class Histo(np.ndarray):
     def fiber_axis(self):
         """Get the axes for the fiber."""
         return tuple(range(self.base_rank, dims(self)))
+    
+    def base_axis(self):
+        """Get the axes for the base."""
+        return tuple(range(0, self.base_rank))
 
     def point(self, index: Indexer):
         """Index point from the base space."""
@@ -83,19 +89,23 @@ class Histo(np.ndarray):
         subfield = self.point(index)
         self[index] = subfield.update(updater)
 
+    def fiber_size(self):
+        return reduce(mul, self.shape[self.base_rank:], 1)
+
+def norm(histo: Histo) -> np.ndarray:
+    """Norm of histogram."""
+    return np.sum(histo, axis=histo.fiber_axis())
+
 
 class Distro(Histo):
     """Distribution of arbitrary shape."""
     @classmethod
     def from_array(cls: Type[T], a: np.ndarray, base_rank: int = 0) -> T:
         """Downcast from ndarray."""
-        rank = dims(a)
-        if rank < base_rank:
-            raise ValueError("base_rank larger than dimensions of array")
-        axis = tuple(range(base_rank, rank))
-        norms = np.sum(a, axis=axis, keepdims=True)
-        distro = (a / norms).view(cls)
-        distro.base_rank = base_rank
+        histo = Histo.from_array(a, base_rank)
+        normer = np.reshape(np.repeat(norm(histo), histo.fiber_size()), histo.shape)
+        distro = (histo / normer).view(cls)
+        distro.base_rank = histo.base_rank
         return distro
 
 
@@ -114,34 +124,46 @@ class Cumulate(np.ndarray):
 
 def normalize(histo: Histo) -> Distro:
     """Normalizes histogram into distribution."""
-    return Distro.from_array(histo)
+    return Distro.from_array(histo, histo.base_rank)
+
+
+def magnitude(histo: Histo) -> Histo:
+    """Shannon magnitude of histo in nats."""
+    under = np.log2(histo, where=(histo > 0.))
+    return Histo.from_array(under, base_rank=histo.base_rank)
 
 
 def information(distro: Distro) -> Histo:
     """Shannon information of distro in nats."""
-    under = -np.log2(distro, where=(distro > 0.))
-    return Histo.from_array(under, base_rank=distro.base_rank)
+    return Histo.from_array(-magnitude(distro), base_rank=distro.base_rank)
 
 
-def entropy(distro: Distro) -> np.ndarray:
-    """Shannon entropy of distro in average nats."""
-    if len(distro) == 1:
+def entropy(histo: Histo) -> np.ndarray:
+    """Shannon entropy of histo in average nats."""
+    if len(histo) == 1:
         return np.array(0.)
-    neg_info = np.log2(distro, where=(distro > 0.))
-    return -np.sum(neg_info*distro, axis=distro.fiber_axis())
+    
+    direct = -np.sum(magnitude(histo)*histo, axis=histo.fiber_axis())
+
+    if isinstance(histo, Distro):
+        return direct
+
+    normed = norm(histo)
+    return direct/normed + np.log2(normed)
 
 
-def relative_entropy(distro: Distro) -> np.ndarray:
+def relative_entropy(histo: Histo) -> np.ndarray:
     """Entropy as a ratio with maximum entropy for size.
         Will be between 0 and 1.
         0 indicates certitude
         1 indicates total equivocality
     """
-    size = len(distro)
+    size = histo.fiber_size()
     if size <= 1:
         return np.array(0.)
+
     max_entropy = np.log2(float(size))
-    return entropy(distro)/max_entropy
+    return entropy(histo)/max_entropy
 
 
 def accumulate(distro: Distro) -> Cumulate:
